@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Scrapbook Studio | Multi-Book Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Inter:wght@300;400;600&family=Playfair+Display&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --ui-bg: #ffffff; 
+            --ui-border: #e0e0e0; 
+            --ui-text: #2c3e50; 
+            --ui-accent: #007aff; 
+            --ui-hover: #f5f5f7;
+            --page-shadow: rgba(0,0,0,0.08);
+            --rotate-handle: #34c759;
+        }
+        
+        * { box-sizing: border-box; }
+        body { 
+            background: #f0f2f5; background-size: cover; background-position: center; 
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column; 
+            align-items: center; font-family: 'Inter', sans-serif; overflow-x: hidden; color: var(--ui-text);
+        }
+
+        /* TOOLBAR */
+        .editor-ui { 
+            position: sticky; top: 0; width: 100%; z-index: 9999; 
+            background: var(--ui-bg); padding: 12px; border-bottom: 1px solid var(--ui-border);
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .ui-section { display: flex; align-items: center; gap: 8px; border-right: 1px solid var(--ui-border); padding: 5px 12px; }
+        .ui-section:last-child { border: none; }
+        
+        select, input, .ui-btn { 
+            background: #fff; border: 1px solid var(--ui-border); padding: 7px 10px; 
+            border-radius: 6px; cursor: pointer; font-size: 11px; color: var(--ui-text);
+        }
+        
+        .ui-btn:hover { background: var(--ui-hover); }
+        .ui-btn.primary { background: var(--ui-accent); color: white; border: none; font-weight: 600; }
+        .label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #95a5a6; }
+
+        /* MULTI-BOOK DRAWER */
+        #bookDrawer {
+            position: fixed; left: -320px; top: 0; width: 300px; height: 100vh;
+            background: var(--ui-bg); z-index: 10001; transition: 0.4s; 
+            padding: 20px; border-right: 1px solid var(--ui-border); box-shadow: 5px 0 25px rgba(0,0,0,0.05);
+        }
+        #bookDrawer.open { left: 0; }
+        .book-list-item { 
+            padding: 12px; border: 1px solid var(--ui-border); border-radius: 8px; 
+            margin-bottom: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .book-list-item:hover { background: var(--ui-hover); }
+
+        /* STICKER DRAWER */
+        #stickerDrawer {
+            position: fixed; right: -320px; top: 0; width: 300px; height: 100vh;
+            background: var(--ui-bg); z-index: 10000; transition: 0.4s; 
+            padding: 20px; border-left: 1px solid var(--ui-border); overflow-y: auto;
+        }
+        #stickerDrawer.open { right: 0; }
+        .sticker-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .sticker-item { font-size: 28px; cursor: pointer; text-align: center; }
+
+        /* STAGE */
+        .stage { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; padding: 40px 20px; perspective: 2500px; }
+        .book { position: relative; width: 450px; height: 600px; transform-style: preserve-3d; transition: transform 0.6s ease; }
+        .page { position: absolute; width: 100%; height: 100%; transform-origin: left; transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1); }
+        .front, .back { 
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; 
+            background-color: white; background-size: cover; background-position: center; 
+            box-shadow: 0 10px 40px var(--page-shadow); overflow: hidden; border: 1px solid #ddd;
+        }
+        .back { transform: rotateY(180deg); }
+        .flipped { transform: rotateY(-180deg); }
+
+        /* CANVAS ITEMS */
+        .canvas-item { position: absolute; cursor: move; transform-origin: center; min-width: 40px; }
+        .item-selected { outline: 2px solid var(--ui-accent); }
+        .user-text { padding: 10px; outline: none; min-width: 60px; line-height: 1.4; color: inherit; }
+        .user-image, .sticker-img { display: block; width: 140px; pointer-events: none; }
+        .handle { width: 16px; height: 16px; position: absolute; border-radius: 50%; border: 2px solid white; display: none; box-shadow: 0 2px 6px rgba(0,0,0,0.15); z-index: 999; }
+        .resizer { background: var(--ui-accent); right: -8px; bottom: -8px; cursor: nwse-resize; }
+        .rotator { background: var(--rotate-handle); left: -8px; bottom: -8px; cursor: alias; }
+        .item-selected .handle { display: block; }
+        .editing-target { border: 2px solid var(--ui-accent) !important; }
+    </style>
+</head>
+<body id="globalBody">
+
+<div class="editor-ui">
+    <div class="ui-section">
+        <button class="ui-btn primary" onclick="toggleBooks()">📚 My Library</button>
+    </div>
+
+    <div class="ui-section">
+        <span class="label">Text</span>
+        <select id="fnt"><option value="'Inter'">Modern</option><option value="'Pacifico'">Cute</option><option value="'Dancing Script'">Script</option></select>
+        <select id="algn"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+        <input type="color" id="clr" value="#2c3e50">
+        <button class="ui-btn primary" onclick="addText()">+ Text</button>
+    </div>
+
+    <div class="ui-section">
+        <span class="label">Layer</span>
+        <button class="ui-btn" onclick="changeLayer(10)">Front</button>
+        <button class="ui-btn" onclick="changeLayer(-10)">Back</button>
+    </div>
+
+    <div class="ui-section">
+        <span class="label">Assets</span>
+        <button class="ui-btn" onclick="triggerUpload('item')">Image</button>
+        <button class="ui-btn" onclick="toggleStickers()">✨ Stickers</button>
+    </div>
+
+    <div class="ui-section">
+        <span class="label">Page</span>
+        <input type="color" id="pgColor" value="#ffffff">
+        <button class="ui-btn" onclick="triggerUpload('page')">Image</button>
+        <button class="ui-btn" onclick="clearTargetBG('page')">Clear</button>
+    </div>
+
+    <div class="ui-section">
+        <span class="label">Global Wall</span>
+        <input type="color" id="bgColor" value="#f0f2f5">
+        <button class="ui-btn" onclick="triggerUpload('global')">Image</button>
+        <button class="ui-btn" onclick="clearTargetBG('global')">Clear</button>
+    </div>
+
+    <div class="ui-section">
+        <button class="ui-btn primary" onclick="shareProject()">🔗 Share</button>
+        <button class="ui-btn" onclick="addNewPage()">+ Page</button>
+    </div>
+</div>
+
+<div id="bookDrawer">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom:20px;">
+        <h3 style="margin:0;">My Scrapbooks</h3>
+        <button class="ui-btn" onclick="toggleBooks()">&times;</button>
+    </div>
+    <button class="ui-btn primary" onclick="createNewScrapbook()" style="width:100%; margin-bottom:20px;">+ New Scrapbook</button>
+    <div id="bookList"></div>
+</div>
+
+<div id="stickerDrawer">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom:15px;">
+        <h3 style="margin:0;">Stickers</h3>
+        <button class="ui-btn" onclick="toggleStickers()">&times;</button>
+    </div>
+    <div class="sticker-grid" id="stickerGrid"></div>
+</div>
+
+<div class="stage"><div class="book" id="book"></div></div>
+
+<input type="file" id="universalInput" hidden accept="image/*" onclick="this.value=null">
+
+<script>
+    const cuteEmojis = ["🌸","🎀","✨","🧸","🍦","🍭","🌈","☁️","⭐","🍓","🍑","🥑","🍪","🧁","🍼","🐾","🐱","🐰","🐹","🐼","🐧","🐣","🦋","🌻","🌷","🌿","🍋","🍒","🍇","🥐","🥞","🍩","🍧","🍹","🎨","📷","💌","💎","🎈","🚀","🪐","🌙","☀️","💖","💗","💓","💘","💝","💕","❣️","🪄","🧚","🦄","🧜","👒","👗","👜","👠","💄","💍","🧶","🧵","🎹","🎻","🎸","🎨","🎬","🪁","🎡","🎢","🎠","⛱️","🏖️","🏡","🏰","⛲","🎐","🏮","🎁","🎉","🍰","🍮","🍬","🍫","🍎","🍉","🍍","🥝","🥦","🍄","🪴","🌵","🎋","🌊","🔥","⚡","🎐","🧧","🍀","🧿"];
+
+    let allScrapbooks = JSON.parse(localStorage.getItem('scrapbook_library')) || {
+        'default': { name: 'My First Book', pages: [{}, {}, {}], globalBG: 'none', globalColor: '#f0f2f5' }
+    };
+    let currentId = localStorage.getItem('current_scrapbook_id') || 'default';
+    let currentProject = allScrapbooks[currentId];
+    
+    let selectedSurface = null;
+    let selectedItem = null;
+    let flippedCount = 0;
+
+    function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shared = urlParams.get('view');
+        if (shared) { 
+            currentProject = JSON.parse(atob(shared)); 
+        } 
+        renderBook();
+        populateStickers();
+        updateBookList();
+        setInterval(autoSave, 2000);
+    }
+
+    function populateStickers() {
+        const grid = document.getElementById('stickerGrid');
+        cuteEmojis.forEach(e => {
+            const d = document.createElement('div'); d.className = 'sticker-item'; d.innerText = e;
+            d.onclick = () => spawn(`<div class="sticker-img" style="font-size:70px">${e}</div>`);
+            grid.appendChild(d);
+        });
+    }
+
+    function renderBook() {
+        const bookEl = document.getElementById('book');
+        bookEl.innerHTML = ''; flippedCount = 0;
+        document.body.style.backgroundColor = currentProject.globalColor || '#f0f2f5';
+        document.body.style.backgroundImage = currentProject.globalBG || 'none';
+
+        currentProject.pages.forEach((pData, i) => {
+            const p = document.createElement('div');
+            p.className = 'page'; p.style.zIndex = 100 - i;
+            p.innerHTML = `
+                <div class="front" style="background-image:${pData.front?.bg || 'none'}; background-color:${pData.front?.color || '#fff'}">${pData.front?.items || ''}</div>
+                <div class="back" style="background-image:${pData.back?.bg || 'none'}; background-color:${pData.back?.color || '#fff'}">${pData.back?.items || ''}</div>
+            `;
+            bookEl.appendChild(p);
+            p.querySelectorAll('.canvas-item').forEach(item => attachItemLogic(item));
+        });
+        selectedSurface = document.querySelector('.front');
+        selectedSurface.classList.add('editing-target');
+    }
+
+    function autoSave() {
+        currentProject.pages = Array.from(document.querySelectorAll('.page')).map(p => ({
+            front: { bg: p.querySelector('.front').style.backgroundImage, color: p.querySelector('.front').style.backgroundColor, items: p.querySelector('.front').innerHTML },
+            back: { bg: p.querySelector('.back').style.backgroundImage, color: p.querySelector('.back').style.backgroundColor, items: p.querySelector('.back').innerHTML }
+        }));
+        currentProject.globalColor = document.body.style.backgroundColor;
+        currentProject.globalBG = document.body.style.backgroundImage;
+        
+        allScrapbooks[currentId] = currentProject;
+        localStorage.setItem('scrapbook_library', JSON.stringify(allScrapbooks));
+        localStorage.setItem('current_scrapbook_id', currentId);
+    }
+
+    // MULTI-BOOK FUNCTIONS
+    function updateBookList() {
+        const list = document.getElementById('bookList');
+        list.innerHTML = '';
+        Object.keys(allScrapbooks).forEach(id => {
+            const item = document.createElement('div');
+            item.className = 'book-list-item';
+            item.innerHTML = `<span>${allScrapbooks[id].name}</span> 
+                             <button class="ui-btn" onclick="deleteBook(event, '${id}')">🗑️</button>`;
+            item.onclick = () => { currentId = id; currentProject = allScrapbooks[id]; renderBook(); toggleBooks(); };
+            list.appendChild(item);
+        });
+    }
+
+    function createNewScrapbook() {
+        const name = prompt("Enter Scrapbook Name:", "New Memories");
+        if (!name) return;
+        const newId = 'book_' + Date.now();
+        allScrapbooks[newId] = { name: name, pages: [{}, {}, {}], globalBG: 'none', globalColor: '#f0f2f5' };
+        currentId = newId; currentProject = allScrapbooks[newId];
+        renderBook(); updateBookList();
+    }
+
+    function deleteBook(e, id) {
+        e.stopPropagation();
+        if (Object.keys(allScrapbooks).length <= 1) return alert("You must have at least one scrapbook.");
+        if (confirm("Delete this scrapbook permanently?")) {
+            delete allScrapbooks[id];
+            if (currentId === id) {
+                currentId = Object.keys(allScrapbooks)[0];
+                currentProject = allScrapbooks[currentId];
+                renderBook();
+            }
+            updateBookList();
+        }
+    }
+
+    function clearTargetBG(type) {
+        if (type === 'page' && selectedSurface) {
+            selectedSurface.style.backgroundImage = 'none';
+            selectedSurface.style.backgroundColor = '#ffffff';
+        } else {
+            document.body.style.backgroundImage = 'none';
+            document.body.style.backgroundColor = '#f0f2f5';
+        }
+    }
+
+    // ITEM LOGIC
+    function attachItemLogic(el) {
+        const content = el.querySelector('.user-image, .sticker-img, .user-text');
+        const resizer = el.querySelector('.resizer');
+        const rotator = el.querySelector('.rotator');
+        if (!el.style.zIndex) el.style.zIndex = "10";
+
+        el.onmousedown = (e) => {
+            if (e.target.classList.contains('handle')) return;
+            e.stopPropagation(); selectItem(el);
+            let sX = e.clientX, sY = e.clientY;
+            const move = (m) => {
+                el.style.left = (el.offsetLeft + (m.clientX - sX)) + 'px';
+                el.style.top = (el.offsetTop + (m.clientY - sY)) + 'px';
+                sX = m.clientX; sY = m.clientY;
+            };
+            const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+            document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+        };
+
+        resizer.onmousedown = (e) => {
+            e.stopPropagation();
+            let sX = e.clientX, sW = content.offsetWidth || parseInt(window.getComputedStyle(content).fontSize);
+            const resize = (m) => {
+                let diff = m.clientX - sX;
+                if (content.classList.contains('sticker-img')) content.style.fontSize = Math.max(20, sW + diff) + 'px';
+                else content.style.width = Math.max(30, sW + diff) + 'px';
+            };
+            const up = () => { document.removeEventListener('mousemove', resize); document.removeEventListener('mouseup', up); };
+            document.addEventListener('mousemove', resize); document.addEventListener('mouseup', up);
+        };
+
+        rotator.onmousedown = (e) => {
+            e.stopPropagation();
+            const rect = el.getBoundingClientRect();
+            const cX = rect.left + rect.width / 2, cY = rect.top + rect.height / 2;
+            const rot = (m) => {
+                const angle = Math.atan2(m.clientY - cY, m.clientX - cX);
+                el.style.transform = `rotate(${angle * (180 / Math.PI) + 90}deg)`;
+            };
+            const up = () => { document.removeEventListener('mousemove', rot); document.removeEventListener('mouseup', up); };
+            document.addEventListener('mousemove', rot); document.addEventListener('mouseup', up);
+        };
+        el.ondblclick = () => el.remove();
+    }
+
+    function spawn(html) {
+        const w = document.createElement('div'); w.className = 'canvas-item'; w.style.zIndex = "10";
+        w.innerHTML = `${html}<div class="handle resizer"></div><div class="handle rotator"></div>`;
+        selectedSurface.appendChild(w); attachItemLogic(w); selectItem(w);
+    }
+
+    function addText() { spawn(`<div class="user-text" contenteditable="true" style="font-family:${fnt.value}; color:${clr.value}; text-align:${algn.value}; font-size:24px">Type here...</div>`); }
+    function changeLayer(val) { if (selectedItem) selectedItem.style.zIndex = (parseInt(selectedItem.style.zIndex) || 10) + val; }
+
+    document.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.editor-ui, #stickerDrawer, #bookDrawer')) return;
+        const page = e.target.closest('.page');
+        if (page) {
+            const rect = page.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x < 45 || x > rect.width - 45) {
+                const pagesArr = Array.from(document.querySelectorAll('.page'));
+                const idx = pagesArr.indexOf(page);
+                if (x > rect.width/2 && idx === flippedCount) { page.classList.add('flipped'); flippedCount++; }
+                else if (x < rect.width/2 && idx === flippedCount - 1) { page.classList.remove('flipped'); flippedCount--; }
+                pagesArr.forEach((p, i) => p.style.zIndex = p.classList.contains('flipped') ? i : 100 - i);
+                document.getElementById('book').style.transform = flippedCount > 0 ? "translateX(50%)" : "translateX(0)";
+            } else {
+                document.querySelectorAll('.front, .back').forEach(s => s.classList.remove('editing-target'));
+                selectedSurface = page.classList.contains('flipped') ? page.querySelector('.back') : page.querySelector('.front');
+                selectedSurface.classList.add('editing-target');
+            }
+        }
+    });
+
+    function triggerUpload(m) { uploadMode = m; document.getElementById('universalInput').click(); }
+    document.getElementById('universalInput').onchange = (e) => {
+        const reader = new FileReader(); if (!e.target.files[0]) return;
+        reader.onload = (ev) => {
+            if (uploadMode === 'page') selectedSurface.style.backgroundImage = `url(${ev.target.result})`;
+            else if (uploadMode === 'global') document.body.style.backgroundImage = `url(${ev.target.result})`;
+            else spawn(`<img src="${ev.target.result}" class="user-image">`);
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    };
+
+    function addNewPage() {
+        const p = document.createElement('div'); p.className = 'page'; p.style.zIndex = 1;
+        p.innerHTML = `<div class="front"></div><div class="back"></div>`;
+        document.getElementById('book').appendChild(p);
+        const pagesArr = Array.from(document.querySelectorAll('.page'));
+        pagesArr.forEach((pg, i) => pg.style.zIndex = pg.classList.contains('flipped') ? i : 100 - i);
+    }
+
+    const toggleStickers = () => document.getElementById('stickerDrawer').classList.toggle('open');
+    const toggleBooks = () => document.getElementById('bookDrawer').classList.toggle('open');
+    const selectItem = (el) => { if(selectedItem) selectedItem.classList.remove('item-selected'); selectedItem = el; el.classList.add('item-selected'); };
+    const shareProject = () => { autoSave(); const link = window.location.href.split('?')[0] + "?view=" + btoa(JSON.stringify(currentProject)); navigator.clipboard.writeText(link); alert("Share link copied!"); };
+
+    [fnt, clr, algn].forEach(ctrl => ctrl.oninput = () => {
+        const t = selectedItem?.querySelector('.user-text');
+        if (t) { t.style.fontFamily = fnt.value; t.style.color = clr.value; t.style.textAlign = algn.value; }
+    });
+
+    pgColor.oninput = () => { if(selectedSurface) { selectedSurface.style.backgroundImage = 'none'; selectedSurface.style.backgroundColor = pgColor.value; } };
+    bgColor.oninput = () => { document.body.style.backgroundImage = 'none'; document.body.style.backgroundColor = bgColor.value; };
+
+    window.onload = init;
+</script>
+</body>
+</html>
