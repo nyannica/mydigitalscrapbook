@@ -56,6 +56,9 @@
         #stickerDrawer { right: -320px; }
         #stickerDrawer.open { right: 0; }
         
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .drawer-header h3 { margin: 0; }
+
         .sticker-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         .sticker-item { font-size: 28px; cursor: pointer; text-align: center; }
 
@@ -173,13 +176,19 @@
 </div>
 
 <div id="bookDrawer">
-    <h3>My Scrapbooks</h3>
+    <div class="drawer-header">
+        <h3>My Scrapbooks</h3>
+        <button class="ui-btn" onclick="toggleBooks()">&times; Close</button>
+    </div>
     <button class="ui-btn primary" onclick="createNewScrapbook()" style="width:100%; margin-bottom:20px;">+ New Scrapbook</button>
     <div id="bookList"></div>
 </div>
 
 <div id="stickerDrawer">
-    <h3>Stickers</h3>
+    <div class="drawer-header">
+        <h3>Stickers</h3>
+        <button class="ui-btn" onclick="toggleStickers()">&times; Close</button>
+    </div>
     <div class="sticker-grid" id="stickerGrid"></div>
 </div>
 
@@ -194,7 +203,7 @@
         'default': { name: 'My First Book', pages: [{}, {}, {}], globalBG: 'none', globalColor: '#f0f2f5' }
     };
     let currentId = localStorage.getItem('current_scrapbook_id') || 'default';
-    let currentProject = allScrapbooks[currentId];
+    let currentProject = allScrapbooks[currentId] || allScrapbooks[Object.keys(allScrapbooks)[0]];
     let selectedSurface = null;
     let selectedItem = null;
     let flippedCount = 0;
@@ -205,16 +214,13 @@
         populateStickers();
         updateBookList();
         
-        // Instant Font Update Listener
         document.getElementById('fnt').addEventListener('change', function() {
             if (selectedItem) {
                 const textEl = selectedItem.querySelector('.user-text');
-                if (textEl) textEl.style.family = this.value; // Internal logic
                 if (textEl) textEl.style.fontFamily = this.value;
             }
         });
 
-        // Instant Color Update Listener
         document.getElementById('clr').addEventListener('input', function() {
             if (selectedItem) {
                 const textEl = selectedItem.querySelector('.user-text');
@@ -225,7 +231,7 @@
         setInterval(autoSave, 2000);
 
         document.addEventListener('mousedown', (e) => {
-            if (!e.target.closest('.canvas-item') && !e.target.closest('.editor-ui')) {
+            if (!e.target.closest('.canvas-item') && !e.target.closest('.editor-ui') && !e.target.closest('#bookDrawer') && !e.target.closest('#stickerDrawer')) {
                 deselectAll();
             }
         });
@@ -238,6 +244,7 @@
 
     function populateStickers() {
         const grid = document.getElementById('stickerGrid');
+        grid.innerHTML = '';
         cuteEmojis.forEach(e => {
             const d = document.createElement('div'); d.className = 'sticker-item'; d.innerText = e;
             d.onclick = () => spawn(`<div class="sticker-img" style="font-size:70px">${e}</div>`);
@@ -276,6 +283,7 @@
     }
 
     function autoSave() {
+        if(!currentProject) return;
         currentProject.pages = Array.from(document.querySelectorAll('.page')).map(p => ({
             front: { bg: p.querySelector('.front').style.backgroundImage, color: p.querySelector('.front').style.backgroundColor, items: p.querySelector('.front').innerHTML },
             back: { bg: p.querySelector('.back').style.backgroundImage, color: p.querySelector('.back').style.backgroundColor, items: p.querySelector('.back').innerHTML }
@@ -284,6 +292,7 @@
         currentProject.globalBG = document.body.style.backgroundImage;
         allScrapbooks[currentId] = currentProject;
         localStorage.setItem('scrapbook_library', JSON.stringify(allScrapbooks));
+        localStorage.setItem('current_scrapbook_id', currentId);
     }
 
     function attachItemLogic(el) {
@@ -345,6 +354,7 @@
     }
 
     function spawn(html) {
+        if(!selectedSurface) return;
         const w = document.createElement('div'); 
         w.className = 'canvas-item'; 
         w.style.zIndex = "10";
@@ -384,11 +394,9 @@
         deselectAll();
         selectedItem = el; 
         el.classList.add('item-selected'); 
-        // Sync toolbar to selected text if applicable
         const textEl = el.querySelector('.user-text');
         if (textEl) {
             document.getElementById('fnt').value = textEl.style.fontFamily.replace(/"/g, "'");
-            // Basic color syncing could go here
         }
     }
 
@@ -457,7 +465,7 @@
     function addNewPage() {
         autoSave();
         currentProject.pages.push({ front: {}, back: {} });
-        renderBook(true); // render with current flip view
+        renderBook(true);
     }
 
     const toggleStickers = () => document.getElementById('stickerDrawer').classList.toggle('open');
@@ -467,11 +475,48 @@
         const list = document.getElementById('bookList'); list.innerHTML = '';
         Object.keys(allScrapbooks).forEach(id => {
             const item = document.createElement('div');
-            item.style.padding = '10px'; item.style.border = '1px solid #ddd'; item.style.margin = '5px 0';
-            item.innerHTML = `<span>${allScrapbooks[id].name}</span>`;
-            item.onclick = () => { currentId = id; currentProject = allScrapbooks[id]; renderBook(); };
+            item.style.cssText = `
+                padding: 10px; border: 1px solid #ddd; margin: 5px 0; 
+                display: flex; justify-content: space-between; align-items: center;
+                background: ${id === currentId ? '#f0f7ff' : '#fff'}; cursor: pointer;
+            `;
+            
+            item.innerHTML = `
+                <span style="flex-grow:1;">${allScrapbooks[id].name}</span>
+                <button class="ui-btn" style="color:var(--delete-red); border-color:var(--delete-red); padding: 2px 8px;">&times;</button>
+            `;
+
+            item.querySelector('span').onclick = () => { 
+                currentId = id; 
+                currentProject = allScrapbooks[id]; 
+                renderBook(); 
+                updateBookList();
+            };
+
+            item.querySelector('button').onclick = (e) => {
+                e.stopPropagation();
+                deleteScrapbook(id);
+            };
+
             list.appendChild(item);
         });
+    }
+
+    function deleteScrapbook(id) {
+        if (Object.keys(allScrapbooks).length <= 1) {
+            alert("You must have at least one scrapbook!");
+            return;
+        }
+        if (confirm(`Delete "${allScrapbooks[id].name}"?`)) {
+            delete allScrapbooks[id];
+            if (id === currentId) {
+                currentId = Object.keys(allScrapbooks)[0];
+                currentProject = allScrapbooks[currentId];
+                renderBook();
+            }
+            localStorage.setItem('scrapbook_library', JSON.stringify(allScrapbooks));
+            updateBookList();
+        }
     }
 
     function createNewScrapbook() {
