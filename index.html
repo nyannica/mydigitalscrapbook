@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ultimate Scrapbook Studio | Pro Edition</title>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Inter:wght@300;400;600&family=Playfair+Display&family=Pacifico&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Inter:wght@300;400;600&family=Playfair+Display&family=Pacifico&family=Bebas+Neue&family=Lobster&family=Caveat&family=Indie+Flower&family=Zeyada&family=Amatic+SC:wght@700&family=Shadows+Into+Light&family=Permanent+Marker&family=Satisfy&family=Courgette&family=Great+Vibes&family=Sacramento&family=Cookie&family=Gloria+Hallelujah&family=Handlee&family=Kalam:wght@700&family=Patrick+Hand&family=Architects+Daughter&family=Coming+Soon&display=swap" rel="stylesheet">
     <style>
         :root { 
             --ui-bg: #ffffff; 
@@ -17,7 +17,7 @@
             --delete-red: #ff3b30;
         }
         
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; touch-action: mutation; }
         body { 
             background: #f0f2f5; background-attachment: fixed; background-size: cover; background-position: center; 
             margin: 0; min-height: 100vh; display: flex; flex-direction: column; 
@@ -71,17 +71,17 @@
         .flipped { transform: rotateY(-180deg); }
 
         /* CANVAS ITEMS */
-        .canvas-item { position: absolute; cursor: move; transform-origin: center; min-width: 40px; display: inline-block; }
+        .canvas-item { position: absolute; cursor: move; transform-origin: center; min-width: 40px; display: inline-block; touch-action: none; }
         .item-selected { outline: 2px solid var(--ui-accent); }
         .user-text { padding: 10px; outline: none; min-width: 60px; line-height: 1.4; color: inherit; }
         .user-image, .sticker-img { display: block; width: 140px; pointer-events: none; }
         .has-shadow { filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); }
 
         /* HANDLES */
-        .handle { width: 18px; height: 18px; position: absolute; border-radius: 50%; border: 2px solid white; display: none; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .resizer { background: var(--ui-accent); right: -9px; bottom: -9px; cursor: nwse-resize; }
-        .rotator { background: var(--rotate-handle); left: -9px; bottom: -9px; cursor: alias; }
-        .remover { background: var(--delete-red); right: -9px; top: -9px; cursor: pointer; display: none; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; }
+        .handle { width: 24px; height: 24px; position: absolute; border-radius: 50%; border: 2px solid white; display: none; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .resizer { background: var(--ui-accent); right: -12px; bottom: -12px; cursor: nwse-resize; }
+        .rotator { background: var(--rotate-handle); left: -12px; bottom: -12px; cursor: alias; }
+        .remover { background: var(--delete-red); right: -12px; top: -12px; cursor: pointer; display: none; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; position: absolute; }
         .item-selected .handle, .item-selected .remover { display: flex; }
 
         /* POLAROID TEMPLATE */
@@ -93,6 +93,11 @@
         .polaroid-caption { font-family: 'Dancing Script', cursive; font-size: 16px; margin-top: 10px; border: none; outline: none; width: 100%; text-align: center; }
 
         .editing-target { border: 2px solid var(--ui-accent) !important; box-shadow: inset 0 0 10px rgba(0,122,255,0.2); }
+
+        @media (max-width: 600px) {
+            .book { width: 300px; height: 400px; }
+            .ui-section { border-right: none; border-bottom: 1px solid var(--ui-border); padding: 10px; width: 100%; justify-content: center; }
+        }
     </style>
 </head>
 <body id="globalBody">
@@ -104,7 +109,31 @@
 
     <div class="ui-section">
         <span class="label">Text</span>
-        <select id="fnt"><option value="'Inter'">Modern</option><option value="'Pacifico'">Cute</option><option value="'Dancing Script'">Script</option></select>
+        <select id="fnt">
+            <option value="'Inter'">Modern</option>
+            <option value="'Pacifico'">Cute</option>
+            <option value="'Dancing Script'">Script</option>
+            <option value="'Playfair Display'">Classic</option>
+            <option value="'Bebas Neue'">Bold Title</option>
+            <option value="'Lobster'">Lobster</option>
+            <option value="'Caveat'">Handwriting</option>
+            <option value="'Indie Flower'">Floral</option>
+            <option value="'Zeyada'">Thin Script</option>
+            <option value="'Amatic SC'">Tall/Thin</option>
+            <option value="'Shadows Into Light'">Light</option>
+            <option value="'Permanent Marker'">Marker</option>
+            <option value="'Satisfy'">Elegant</option>
+            <option value="'Courgette'">Smooth</option>
+            <option value="'Great Vibes'">Formal</option>
+            <option value="'Sacramento'">Cursive</option>
+            <option value="'Cookie'">Round</option>
+            <option value="'Gloria Hallelujah'">School</option>
+            <option value="'Handlee'">Lettering</option>
+            <option value="'Kalam'">Chalk</option>
+            <option value="'Patrick Hand'">Clean Script</option>
+            <option value="'Architects Daughter'">Architect</option>
+            <option value="'Coming Soon'">Doodle</option>
+        </select>
         <input type="color" id="clr" value="#2c3e50">
         <button class="ui-btn primary" onclick="addText()">+ Text</button>
     </div>
@@ -125,14 +154,14 @@
 
     <div class="ui-section">
         <span class="label">Page Background</span>
-        <input type="color" id="pgColor" value="#ffffff">
+        <input type="color" id="pgColor" value="#ffffff" onchange="updatePageColor(this.value)">
         <button class="ui-btn" onclick="triggerUpload('page')">Upload BG</button>
         <button class="ui-btn" onclick="clearTargetBG('page')">Clear</button>
     </div>
 
     <div class="ui-section">
         <span class="label">Global Wall</span>
-        <input type="color" id="bgColor" value="#f0f2f5">
+        <input type="color" id="bgColor" value="#f0f2f5" onchange="updateGlobalColor(this.value)">
         <button class="ui-btn" onclick="triggerUpload('global')">Upload BG</button>
         <button class="ui-btn" onclick="clearTargetBG('global')">Clear</button>
     </div>
@@ -175,9 +204,26 @@
         renderBook();
         populateStickers();
         updateBookList();
+        
+        // Instant Font Update Listener
+        document.getElementById('fnt').addEventListener('change', function() {
+            if (selectedItem) {
+                const textEl = selectedItem.querySelector('.user-text');
+                if (textEl) textEl.style.family = this.value; // Internal logic
+                if (textEl) textEl.style.fontFamily = this.value;
+            }
+        });
+
+        // Instant Color Update Listener
+        document.getElementById('clr').addEventListener('input', function() {
+            if (selectedItem) {
+                const textEl = selectedItem.querySelector('.user-text');
+                if (textEl) textEl.style.color = this.value;
+            }
+        });
+
         setInterval(autoSave, 2000);
 
-        // Click away listener to deselect
         document.addEventListener('mousedown', (e) => {
             if (!e.target.closest('.canvas-item') && !e.target.closest('.editor-ui')) {
                 deselectAll();
@@ -199,15 +245,20 @@
         });
     }
 
-    function renderBook() {
+    function renderBook(preserveView = false) {
         const bookEl = document.getElementById('book');
-        bookEl.innerHTML = ''; flippedCount = 0;
+        bookEl.innerHTML = ''; 
+        if (!preserveView) flippedCount = 0;
+        
         document.body.style.backgroundColor = currentProject.globalColor || '#f0f2f5';
         document.body.style.backgroundImage = currentProject.globalBG || 'none';
 
         currentProject.pages.forEach((pData, i) => {
             const p = document.createElement('div');
-            p.className = 'page'; p.style.zIndex = 100 - i;
+            p.className = 'page'; 
+            if (preserveView && i < flippedCount) p.classList.add('flipped');
+            
+            p.style.zIndex = p.classList.contains('flipped') ? i : 100 - i;
             p.innerHTML = `
                 <div class="front" style="background-image:${pData.front?.bg || 'none'}; background-color:${pData.front?.color || '#fff'}">${pData.front?.items || ''}</div>
                 <div class="back" style="background-image:${pData.back?.bg || 'none'}; background-color:${pData.back?.color || '#fff'}">${pData.back?.items || ''}</div>
@@ -215,8 +266,13 @@
             bookEl.appendChild(p);
             p.querySelectorAll('.canvas-item').forEach(item => attachItemLogic(item));
         });
-        selectedSurface = document.querySelector('.front');
-        selectedSurface.classList.add('editing-target');
+
+        const allPages = document.querySelectorAll('.page');
+        const activePage = allPages[flippedCount] || allPages[allPages.length - 1];
+        if (activePage) {
+            selectedSurface = activePage.classList.contains('flipped') ? activePage.querySelector('.back') : activePage.querySelector('.front');
+            selectedSurface.classList.add('editing-target');
+        }
     }
 
     function autoSave() {
@@ -235,20 +291,30 @@
         const rotator = el.querySelector('.rotator');
         const remover = el.querySelector('.remover');
         
-        el.onmousedown = (e) => {
+        const moveHandler = (e) => {
             if (e.target.classList.contains('handle') || e.target.classList.contains('remover')) return;
             e.stopPropagation(); 
             selectItem(el);
+            let sX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let sY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
             
-            let sX = e.clientX, sY = e.clientY;
             const move = (m) => {
-                el.style.left = (el.offsetLeft + (m.clientX - sX)) + 'px';
-                el.style.top = (el.offsetTop + (m.clientY - sY)) + 'px';
-                sX = m.clientX; sY = m.clientY;
+                let mX = m.type.includes('touch') ? m.touches[0].clientX : m.clientX;
+                let mY = m.type.includes('touch') ? m.touches[0].clientY : m.clientY;
+                el.style.left = (el.offsetLeft + (mX - sX)) + 'px';
+                el.style.top = (el.offsetTop + (mY - sY)) + 'px';
+                sX = mX; sY = mY;
             };
-            const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+            const up = () => { 
+                document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+                document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up);
+            };
             document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+            document.addEventListener('touchmove', move); document.addEventListener('touchend', up);
         };
+
+        el.addEventListener('mousedown', moveHandler);
+        el.addEventListener('touchstart', moveHandler, {passive: false});
 
         resizer.onmousedown = (e) => {
             e.stopPropagation();
@@ -290,7 +356,7 @@
     }
 
     function addText() { 
-        spawn(`<div class="user-text" contenteditable="true" style="font-family:${fnt.value}; color:${clr.value}; font-size:24px">Type here...</div>`); 
+        spawn(`<div class="user-text" contenteditable="true" style="font-family:${document.getElementById('fnt').value}; color:${document.getElementById('clr').value}; font-size:24px">Type here...</div>`); 
     }
 
     function addPolaroid() {
@@ -318,9 +384,14 @@
         deselectAll();
         selectedItem = el; 
         el.classList.add('item-selected'); 
+        // Sync toolbar to selected text if applicable
+        const textEl = el.querySelector('.user-text');
+        if (textEl) {
+            document.getElementById('fnt').value = textEl.style.fontFamily.replace(/"/g, "'");
+            // Basic color syncing could go here
+        }
     }
 
-    // Page Flipping & Surface Selection Logic
     document.addEventListener('mousedown', (e) => {
         const page = e.target.closest('.page');
         if (page && !e.target.closest('.canvas-item')) {
@@ -375,14 +446,20 @@
         }
     }
 
-    function addNewPage() {
-        const p = document.createElement('div'); p.className = 'page';
-        p.innerHTML = `<div class="front"></div><div class="back"></div>`;
-        document.getElementById('book').appendChild(p);
-        renderBook(); // Re-render to refresh Z-indices
+    function updatePageColor(val) {
+        if(selectedSurface) selectedSurface.style.backgroundColor = val;
     }
 
-    // Boilerplate Multi-book / UI Toggle helpers
+    function updateGlobalColor(val) {
+        document.body.style.backgroundColor = val;
+    }
+
+    function addNewPage() {
+        autoSave();
+        currentProject.pages.push({ front: {}, back: {} });
+        renderBook(true); // render with current flip view
+    }
+
     const toggleStickers = () => document.getElementById('stickerDrawer').classList.toggle('open');
     const toggleBooks = () => document.getElementById('bookDrawer').classList.toggle('open');
     
